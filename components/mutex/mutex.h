@@ -19,6 +19,7 @@ typedef enum MutexKey
     kMutexKey_Buttons,
     kMutexKey_Battery,
     kMutexKey_DPadCtl,
+    kMutexKey_ColorCorrectLCD,
     kMutexKey_ColorCorrectUSB,
     kMutexKey_SilentMode,
     kMutexKey_FrameBlend,

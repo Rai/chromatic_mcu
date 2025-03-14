@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "osd_shared.h"
 #include "lvgl.h"
+#include "mutex.h"
 #include "settings.h"
 
 LV_IMG_DECLARE(img_toggle_on);
@@ -23,7 +24,7 @@ typedef struct ColorCorrectLCD {
 static const char* TAG = "ColorCorrectLCD";
 static ColorCorrectLCD_t _Ctx;
 
-static void SaveToSettings(ColorCorrectLCDState_t eNewState);
+static void SaveToSettings(const ColorCorrectLCDState_t eNewState);
 
 OSD_Result_t ColorCorrectLCD_Draw(void* arg)
 {
@@ -63,29 +64,25 @@ void ColorCorrectLCD_Update(ColorCorrectLCDState_t eNewState)
         return;
     }
 
-    if (_Ctx.pImgToggleOffObj != NULL)
-    {
-        lv_obj_del(_Ctx.pImgToggleOffObj);
-        _Ctx.pImgToggleOffObj = NULL;
-    }
+    ColorCorrectLCD_OnTransition(NULL);
 
-    if (_Ctx.pImgToggleOnObj != NULL)
+    if (Mutex_Take(kMutexKey_ColorCorrectLCD) == kMutexResult_Ok)
     {
-        lv_obj_del(_Ctx.pImgToggleOnObj);
-        _Ctx.pImgToggleOnObj = NULL;
-    }
+        const ColorCorrectLCDState_t eCurrentState = _Ctx.eCurrentState;
+        _Ctx.eCurrentState = eNewState;
 
-    if (eNewState != _Ctx.eCurrentState)
-    {
-        SaveToSettings(eNewState);
+        if (eNewState != eCurrentState)
+        {
+            SaveToSettings(eNewState);
+        }
+
+        (void) Mutex_Give(kMutexKey_ColorCorrectLCD);
     }
 
     if (_Ctx.fnOnUpdateCb != NULL)
     {
         _Ctx.fnOnUpdateCb();
     }
-
-    _Ctx.eCurrentState = eNewState;
 }
 
 OSD_Result_t ColorCorrectLCD_OnButton(const Button_t Button, const ButtonState_t State, void *arg)

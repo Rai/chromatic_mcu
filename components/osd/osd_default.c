@@ -168,7 +168,7 @@ static void CreateMenuDisplay(lv_obj_t *const pScreen)
         return;
     }
 
-    #ifdef ENABLE_COLOR_CORRECTION
+    //#ifdef ENABLE_COLOR_CORRECTION
     static TabItem_t ColorCorrection_LCD = {
         .Widget = {
             .Name = "LCD COLOR CORR.",
@@ -183,7 +183,7 @@ static void CreateMenuDisplay(lv_obj_t *const pScreen)
         ESP_LOGE(TAG, "%s tab item init failed %d", ColorCorrection_LCD.Widget.Name, eResult);
         return;
     }
-    #endif
+    //#endif
 
     static TabItem_t ColorCorrection_USB = {
         .Widget = {
