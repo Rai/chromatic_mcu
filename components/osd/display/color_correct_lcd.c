@@ -6,17 +6,21 @@
 #include "mutex.h"
 #include "settings.h"
 
-LV_IMG_DECLARE(img_toggle_on);
-LV_IMG_DECLARE(img_toggle_off);
+LV_IMG_DECLARE(img_option_dis);
+LV_IMG_DECLARE(img_option_en);
 
 enum {
-    kToggleBtnX_px = 77,
-    kToggleBtnY_px = 55,
+    kToggleOptX_px = 77,
+
+    kToggleOptTop_Y_px = 52,
+    kToggleOptBtm_Y_px = 76,
 };
 
 typedef struct ColorCorrectLCD {
-    lv_obj_t* pImgToggleOffObj;
-    lv_obj_t* pImgToggleOnObj;
+    lv_obj_t* pImgOptionTopObj;
+    lv_obj_t* pImgOptionBtmObj;
+    lv_obj_t* pOptionTopTextObj;
+    lv_obj_t* pOptionBtmTextObj;
     ColorCorrectLCDState_t eCurrentState;
     fnOnUpdateCb_t fnOnUpdateCb;
 } ColorCorrectLCD_t;
@@ -34,24 +38,48 @@ OSD_Result_t ColorCorrectLCD_Draw(void* arg)
     }
 
     lv_obj_t *const pScreen = (lv_obj_t *const) arg;
+    
+    
+    const bool IsDisabled = (_Ctx.eCurrentState == kColorCorrectLCDState_Off);
 
-    if (_Ctx.eCurrentState == kColorCorrectLCDState_Off)
+    if (_Ctx.pImgOptionTopObj == NULL)
     {
-        if (_Ctx.pImgToggleOffObj == NULL)
-        {
-            _Ctx.pImgToggleOffObj = lv_img_create(pScreen);
-            lv_obj_align(_Ctx.pImgToggleOffObj, LV_ALIGN_TOP_LEFT, kToggleBtnX_px, kToggleBtnY_px);
-            lv_img_set_src(_Ctx.pImgToggleOffObj, &img_toggle_off);
-        }
+        _Ctx.pImgOptionTopObj = lv_img_create(pScreen);
+
+        lv_obj_t* pOff = _Ctx.pImgOptionTopObj;
+        lv_obj_align(pOff, LV_ALIGN_TOP_LEFT, kToggleOptX_px, IsDisabled ? kToggleOptBtm_Y_px : kToggleOptTop_Y_px);
+        lv_img_set_src(pOff, &img_option_dis);
     }
-    else
+
+    if (_Ctx.pImgOptionBtmObj == NULL)
     {
-        if (_Ctx.pImgToggleOnObj == NULL)
-        {
-            _Ctx.pImgToggleOnObj = lv_img_create(pScreen);
-            lv_obj_align(_Ctx.pImgToggleOnObj, LV_ALIGN_TOP_LEFT, kToggleBtnX_px, kToggleBtnY_px);
-            lv_img_set_src(_Ctx.pImgToggleOnObj, &img_toggle_on);
-        }
+        _Ctx.pImgOptionBtmObj = lv_img_create(pScreen);
+
+        lv_obj_t* pOn = _Ctx.pImgOptionBtmObj;
+        lv_obj_align(pOn, LV_ALIGN_TOP_LEFT, kToggleOptX_px, IsDisabled ? kToggleOptTop_Y_px : kToggleOptBtm_Y_px);
+        lv_img_set_src(pOn, &img_option_en);
+    }
+
+    if (_Ctx.pOptionTopTextObj == NULL)
+    {
+        _Ctx.pOptionTopTextObj = lv_label_create(IsDisabled ? _Ctx.pImgOptionBtmObj : _Ctx.pImgOptionTopObj);
+        lv_obj_align(_Ctx.pOptionTopTextObj, LV_ALIGN_CENTER, 1, 1);
+        lv_label_set_long_mode(_Ctx.pOptionTopTextObj, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(_Ctx.pOptionTopTextObj, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_width(_Ctx.pOptionTopTextObj, img_option_en.header.w * 0.50);
+        lv_obj_add_style(_Ctx.pOptionTopTextObj, OSD_GetStyleTextBlack(), 0);
+        lv_label_set_text(_Ctx.pOptionTopTextObj, "RAW COLOR");
+    }
+
+    if (_Ctx.pOptionBtmTextObj == NULL)
+    {
+        _Ctx.pOptionBtmTextObj = lv_label_create(IsDisabled ? _Ctx.pImgOptionTopObj : _Ctx.pImgOptionBtmObj);
+        lv_obj_align(_Ctx.pOptionBtmTextObj, LV_ALIGN_CENTER, 1, 1);
+        lv_label_set_long_mode(_Ctx.pOptionBtmTextObj, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(_Ctx.pOptionBtmTextObj, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_width(_Ctx.pOptionBtmTextObj, img_option_en.header.w * 0.80);
+        lv_obj_add_style(_Ctx.pOptionBtmTextObj, OSD_GetStyleTextBlack(), 0);
+        lv_label_set_text(_Ctx.pOptionBtmTextObj, "CORRECTED COLOR");
     }
 
     return kOSD_Result_Ok;
@@ -95,9 +123,10 @@ OSD_Result_t ColorCorrectLCD_OnButton(const Button_t Button, const ButtonState_t
         {
             if (State == kButtonState_Pressed)
             {
-                ESP_LOGI(TAG, "Updating Color Correction LCD from %d", _Ctx.eCurrentState);
+                const ColorCorrectLCDState_t eState = _Ctx.eCurrentState;
+                ESP_LOGI(TAG, "Updating Color Correction LCD from %d", eState);
 
-                ColorCorrectLCD_Update(_Ctx.eCurrentState ^ 1);
+                ColorCorrectLCD_Update(eState ^ 1);
             }
             break;
         }
@@ -112,8 +141,10 @@ OSD_Result_t ColorCorrectLCD_OnTransition(void* arg)
     (void)arg;
 
     lv_obj_t** ToDelete[] = {
-        &_Ctx.pImgToggleOffObj,
-        &_Ctx.pImgToggleOnObj,
+        &_Ctx.pOptionTopTextObj,
+        &_Ctx.pOptionBtmTextObj,
+        &_Ctx.pImgOptionTopObj,
+        &_Ctx.pImgOptionBtmObj,
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(ToDelete); i++)
